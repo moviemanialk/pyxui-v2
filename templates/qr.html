@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}QR Code · PyXUI{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 text-center">
+    <div class="card p-4">
+      <h5 class="mb-3">{{ remark }}</h5>
+      <img src="{{ qr }}" alt="QR code" class="mx-auto mb-3" style="max-width:280px; background:white; padding:12px; border-radius:8px;">
+      <div class="link-box text-start">{{ link }}</div>
+      <a class="btn btn-outline-light w-100 mt-3" href="{{ url_for('dashboard') }}">Back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

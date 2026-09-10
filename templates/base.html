@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}PyXUI{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background:#0f1117; color:#e6e6e6; }
+    .navbar { background:#161923 !important; border-bottom:1px solid #262a38; }
+    .card { background:#161923; border:1px solid #262a38; }
+    .table { color:#e6e6e6; }
+    .table thead { color:#8b90a3; }
+    a { color:#5b8def; }
+    .badge-on { background:#1f9d55; }
+    .badge-off { background:#6b7280; }
+    .badge-proto-vless { background:#5b8def; }
+    .badge-proto-vmess { background:#9b59b6; }
+    .badge-proto-trojan { background:#e67e22; }
+    .link-box { font-family:monospace; font-size:0.75rem; word-break:break-all; background:#0f1117; padding:6px 8px; border-radius:6px; border:1px solid #262a38; }
+    .progress { background:#0f1117; height:6px; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand navbar-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">PyXUI</a>
+    {% if session.get('logged_in') %}
+    <div class="d-flex">
+      <a class="btn btn-sm btn-outline-light me-2" href="{{ url_for('settings') }}">Settings</a>
+      <a class="btn btn-sm btn-outline-danger" href="{{ url_for('logout') }}">Logout</a>
+    </div>
+    {% endif %}
+  </div>
+</nav>
+<div class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert {{ 'alert-success' if category == 'success' else 'alert-danger' }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+</body>
+</html>

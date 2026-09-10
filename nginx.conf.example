@@ -1,0 +1,65 @@
+# Example nginx site config for PyXUI v2: TLS termination + WebSocket
+# proxying to all three Xray protocol inbounds.
+#
+# Copy to /etc/nginx/sites-available/pyxui, symlink into sites-enabled,
+# edit the domain/cert paths and the three "location" paths to match
+# whatever you set on the panel's Settings page, then:
+#   nginx -t && systemctl reload nginx
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name vpn.yourdomain.com;
+
+    ssl_certificate     /etc/letsencrypt/live/vpn.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/vpn.yourdomain.com/privkey.pem;
+
+    # VLESS clients -> local port 10001
+    location /vless-ws {
+        proxy_pass http://127.0.0.1:10001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # VMess clients -> local port 10002
+    location /vmess-ws {
+        proxy_pass http://127.0.0.1:10002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Trojan clients -> local port 10003
+    location /trojan-ws {
+        proxy_pass http://127.0.0.1:10003;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Panel UI itself — recommended to also lock this down with
+    # basic auth or an allowlist once you're comfortable (see docs/CONFIG.md)
+    location /panel/ {
+        proxy_pass http://127.0.0.1:2053/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Anything else looks like a dead site.
+    location / {
+        return 404;
+    }
+}
+
+server {
+    listen 80;
+    server_name vpn.yourdomain.com;
+    return 301 https://$host$request_uri;
+}

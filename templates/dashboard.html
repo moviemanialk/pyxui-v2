@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · PyXUI{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0">Clients</h4>
+    <small class="text-secondary">Domain: {{ domain }} · Xray status:
+      <span class="badge {{ 'badge-on' if xray_status == 'active' else 'badge-off' }}">{{ xray_status }}</span>
+    </small>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('add_client') }}">+ Add Client</a>
+</div>
+
+<div class="card p-3">
+  <table class="table table-borderless align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Remark</th>
+        <th>Protocol</th>
+        <th>Status</th>
+        <th>Traffic</th>
+        <th>Expiry</th>
+        <th>Link</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in clients %}
+      <tr>
+        <td>{{ c.remark }}</td>
+        <td><span class="badge badge-proto-{{ c.protocol }}">{{ c.protocol }}</span></td>
+        <td>
+          <span class="badge {{ 'badge-on' if c.enabled else 'badge-off' }}">
+            {{ 'enabled' if c.enabled else 'disabled' }}
+          </span>
+        </td>
+        <td style="min-width:140px;">
+          <small>{{ c.used_human }} / {{ c.limit_human }}</small>
+          {% if c.traffic_limit_gb %}
+          <div class="progress">
+            <div class="progress-bar {{ 'bg-danger' if c.pct_used >= 90 else 'bg-info' }}" style="width: {{ c.pct_used }}%"></div>
+          </div>
+          {% endif %}
+        </td>
+        <td><small class="text-secondary">{{ c.expiry_date or '—' }}</small></td>
+        <td style="max-width:260px;">
+          <div class="link-box">{{ c.link[:60] }}{{ '…' if c.link|length > 60 }}</div>
+          <a class="small" href="{{ url_for('client_qr', client_id=c.id) }}">QR code</a>
+          ·
+          <a class="small" href="{{ url_for('subscription', sub_token=c.sub_token) }}" target="_blank">Sub link</a>
+        </td>
+        <td class="text-end">
+          <form method="post" action="{{ url_for('toggle_client', client_id=c.id) }}" class="d-inline">
+            <button class="btn btn-sm btn-outline-warning">{{ 'Disable' if c.enabled else 'Enable' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('delete_client', client_id=c.id) }}" class="d-inline"
+                onsubmit="return confirm('Delete this client?');">
+            <button class="btn btn-sm btn-outline-danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center text-secondary py-4">No clients yet. Add one to get started.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

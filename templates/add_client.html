@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Add Client · PyXUI{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card p-4">
+      <h5 class="mb-3">Add a new client</h5>
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label">Remark / label</label>
+          <input class="form-control" name="remark" placeholder="e.g. sithum-laptop" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Protocol</label>
+          <select class="form-select" name="protocol">
+            <option value="vless">VLESS</option>
+            <option value="vmess">VMess</option>
+            <option value="trojan">Trojan</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Traffic limit (GB, 0 = unlimited)</label>
+          <input class="form-control" type="number" step="0.1" min="0" name="traffic_limit_gb" value="0">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Expiry date (optional)</label>
+          <input class="form-control" type="date" name="expiry_date">
+        </div>
+        <button class="btn btn-primary w-100" type="submit">Create Client</button>
+        <a class="btn btn-outline-light w-100 mt-2" href="{{ url_for('dashboard') }}">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
