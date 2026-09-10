@@ -1,68 +1,136 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · PyXUI{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+
+<div class="topbar">
   <div>
-    <h4 class="mb-0">Clients</h4>
-    <small class="text-secondary">Domain: {{ domain }} · Xray status:
+    <h1>Dashboard</h1>
+    <div class="subtitle">{{ domain }} · Xray
       <span class="badge {{ 'badge-on' if xray_status == 'active' else 'badge-off' }}">{{ xray_status }}</span>
-    </small>
+    </div>
   </div>
-  <a class="btn btn-primary" href="{{ url_for('add_client') }}">+ Add Client</a>
+  <a class="btn btn-primary" href="{{ url_for('add_client') }}"><i class="lucide-plus"></i> Add Client</a>
 </div>
 
-<div class="card p-3">
-  <table class="table table-borderless align-middle mb-0">
-    <thead>
-      <tr>
-        <th>Remark</th>
-        <th>Protocol</th>
-        <th>Status</th>
-        <th>Traffic</th>
-        <th>Expiry</th>
-        <th>Link</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in clients %}
-      <tr>
-        <td>{{ c.remark }}</td>
-        <td><span class="badge badge-proto-{{ c.protocol }}">{{ c.protocol }}</span></td>
-        <td>
-          <span class="badge {{ 'badge-on' if c.enabled else 'badge-off' }}">
-            {{ 'enabled' if c.enabled else 'disabled' }}
-          </span>
-        </td>
-        <td style="min-width:140px;">
-          <small>{{ c.used_human }} / {{ c.limit_human }}</small>
-          {% if c.traffic_limit_gb %}
-          <div class="progress">
-            <div class="progress-bar {{ 'bg-danger' if c.pct_used >= 90 else 'bg-info' }}" style="width: {{ c.pct_used }}%"></div>
-          </div>
-          {% endif %}
-        </td>
-        <td><small class="text-secondary">{{ c.expiry_date or '—' }}</small></td>
-        <td style="max-width:260px;">
-          <div class="link-box">{{ c.link[:60] }}{{ '…' if c.link|length > 60 }}</div>
-          <a class="small" href="{{ url_for('client_qr', client_id=c.id) }}">QR code</a>
-          ·
-          <a class="small" href="{{ url_for('subscription', sub_token=c.sub_token) }}" target="_blank">Sub link</a>
-        </td>
-        <td class="text-end">
-          <form method="post" action="{{ url_for('toggle_client', client_id=c.id) }}" class="d-inline">
-            <button class="btn btn-sm btn-outline-warning">{{ 'Disable' if c.enabled else 'Enable' }}</button>
-          </form>
-          <form method="post" action="{{ url_for('delete_client', client_id=c.id) }}" class="d-inline"
-                onsubmit="return confirm('Delete this client?');">
-            <button class="btn btn-sm btn-outline-danger">Delete</button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan="7" class="text-center text-secondary py-4">No clients yet. Add one to get started.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label"><i class="lucide-users"></i> Total clients</div>
+    <div class="stat-value">{{ stats.total }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><i class="lucide-check-circle"></i> Active</div>
+    <div class="stat-value" style="color:var(--green)">{{ stats.active }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><i class="lucide-network"></i> By protocol</div>
+    <div style="display:flex; gap:10px; margin-top:6px; font-size:12px;">
+      <span class="badge badge-vless">V {{ stats.by_protocol.vless }}</span>
+      <span class="badge badge-vmess">M {{ stats.by_protocol.vmess }}</span>
+      <span class="badge badge-trojan">T {{ stats.by_protocol.trojan }}</span>
+      <span class="badge badge-ssh">S {{ stats.by_protocol.ssh }}</span>
+    </div>
+  </div>
+  {% if system %}
+  <div class="stat-card">
+    <div class="stat-label"><i class="lucide-cpu"></i> CPU / RAM</div>
+    <div class="stat-value" style="font-size:18px;">{{ system.cpu_pct }}% <span style="color:var(--text-faint); font-size:14px;">/ {{ system.mem_pct }}%</span></div>
+    <div class="stat-bar"><div class="stat-bar-fill {{ 'danger' if system.mem_pct > 90 else ('warn' if system.mem_pct > 70 else '') }}" style="width:{{ system.mem_pct }}%"></div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><i class="lucide-hard-drive"></i> Disk</div>
+    <div class="stat-value" style="font-size:18px;">{{ system.disk_used }} <span style="color:var(--text-faint); font-size:13px;">/ {{ system.disk_total }}</span></div>
+    <div class="stat-bar"><div class="stat-bar-fill {{ 'danger' if system.disk_pct > 90 else ('warn' if system.disk_pct > 70 else '') }}" style="width:{{ system.disk_pct }}%"></div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><i class="lucide-clock"></i> Uptime</div>
+    <div class="stat-value" style="font-size:18px;">{{ system.uptime }}</div>
+  </div>
+  {% endif %}
 </div>
+
+<form class="filter-bar" method="get">
+  <input type="text" name="q" placeholder="Search by remark..." value="{{ q }}">
+  <select name="protocol" onchange="this.form.submit()">
+    <option value="">All protocols</option>
+    <option value="vless" {{ 'selected' if proto_filter == 'vless' }}>VLESS</option>
+    <option value="vmess" {{ 'selected' if proto_filter == 'vmess' }}>VMess</option>
+    <option value="trojan" {{ 'selected' if proto_filter == 'trojan' }}>Trojan</option>
+    <option value="ssh" {{ 'selected' if proto_filter == 'ssh' }}>SSH</option>
+  </select>
+  <select name="status" onchange="this.form.submit()">
+    <option value="">Any status</option>
+    <option value="enabled" {{ 'selected' if status_filter == 'enabled' }}>Enabled</option>
+    <option value="disabled" {{ 'selected' if status_filter == 'disabled' }}>Disabled</option>
+  </select>
+  <button class="btn btn-sm" type="submit"><i class="lucide-search"></i> Search</button>
+  {% if q or proto_filter or status_filter %}
+  <a class="btn btn-sm btn-ghost" href="{{ url_for('dashboard') }}">Clear</a>
+  {% endif %}
+</form>
+
+{% if clients %}
+<div class="client-grid">
+  {% for c in clients %}
+  <div class="client-card">
+    <div class="client-head">
+      <div>
+        <div class="client-name">{{ c.remark }}</div>
+        <div class="client-meta">created {{ c.created_at[:10] }}{% if c.expiry_date %} · expires {{ c.expiry_date }}{% endif %}</div>
+      </div>
+      <span class="badge {{ 'badge-on' if c.enabled else 'badge-off' }}">{{ 'active' if c.enabled else 'off' }}</span>
+    </div>
+
+    <div class="client-badges">
+      <span class="badge badge-{{ c.protocol }}">{{ c.protocol }}</span>
+      {% if c.protocol != 'ssh' %}
+        <span class="badge badge-off">{{ c.used_human }} / {{ c.limit_human }}</span>
+      {% endif %}
+    </div>
+
+    {% if c.traffic_limit_gb and c.protocol != 'ssh' %}
+    <div class="progress"><div class="progress-fill {{ 'danger' if c.pct_used >= 90 }}" style="width:{{ c.pct_used }}%"></div></div>
+    {% endif %}
+
+    {% if c.protocol == 'ssh' %}
+      <div class="link-box" onclick="copyText('{{ c.ssh_username }}', 'Username')">
+        <i class="lucide-user"></i> {{ c.ssh_username }}
+      </div>
+      <div class="link-box" onclick="copyText('{{ c.ssh_password }}', 'Password')">
+        <i class="lucide-key"></i> {{ c.ssh_password }}
+      </div>
+      <div class="link-box" onclick="copyText('{{ c.link }}', 'SSH command')" style="margin-top:2px;">
+        {{ c.link }}
+      </div>
+    {% else %}
+      <div class="link-box" onclick="copyText('{{ c.link }}', 'Link')" style="margin-top:8px;">
+        {{ c.link[:70] }}{{ '…' if c.link|length > 70 }}
+      </div>
+    {% endif %}
+
+    <div class="client-actions">
+      {% if c.protocol != 'ssh' %}
+      <a class="btn btn-sm" href="{{ url_for('client_qr', client_id=c.id) }}"><i class="lucide-qr-code"></i> QR</a>
+      <a class="btn btn-sm" href="{{ url_for('subscription', sub_token=c.sub_token) }}" target="_blank"><i class="lucide-rss"></i> Sub</a>
+      {% endif %}
+      <form method="post" action="{{ url_for('toggle_client', client_id=c.id) }}">
+        <button class="btn btn-sm btn-warn">{{ 'Disable' if c.enabled else 'Enable' }}</button>
+      </form>
+      <form method="post" action="{{ url_for('delete_client', client_id=c.id) }}" onsubmit="return confirm('Delete {{ c.remark }}? This cannot be undone.');">
+        <button class="btn btn-sm btn-danger"><i class="lucide-trash-2"></i></button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+  <i class="lucide-inbox"></i>
+  {% if q or proto_filter or status_filter %}
+    No clients match this filter.
+  {% else %}
+    No clients yet. <a href="{{ url_for('add_client') }}">Add your first one</a>.
+  {% endif %}
+</div>
+{% endif %}
+
 {% endblock %}

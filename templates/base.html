@@ -1,47 +1,238 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}PyXUI{% endblock %}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background:#0f1117; color:#e6e6e6; }
-    .navbar { background:#161923 !important; border-bottom:1px solid #262a38; }
-    .card { background:#161923; border:1px solid #262a38; }
-    .table { color:#e6e6e6; }
-    .table thead { color:#8b90a3; }
-    a { color:#5b8def; }
-    .badge-on { background:#1f9d55; }
-    .badge-off { background:#6b7280; }
-    .badge-proto-vless { background:#5b8def; }
-    .badge-proto-vmess { background:#9b59b6; }
-    .badge-proto-trojan { background:#e67e22; }
-    .link-box { font-family:monospace; font-size:0.75rem; word-break:break-all; background:#0f1117; padding:6px 8px; border-radius:6px; border:1px solid #262a38; }
-    .progress { background:#0f1117; height:6px; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}PyXUI{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/lucide-static@0.462.0/font/lucide.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #12151d;
+    --panel-2: #171b26;
+    --border: #232838;
+    --text: #e8eaf0;
+    --text-dim: #8b91a3;
+    --text-faint: #5b6070;
+    --accent: #6d8cff;
+    --accent-dim: #3d4d99;
+    --green: #2fbf71;
+    --red: #ef5757;
+    --amber: #f0a93a;
+    --purple: #a875e0;
+    --orange: #e0925f;
+    --cyan: #4fc3e0;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    margin: 0;
+    display: flex;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: 220px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    flex-shrink: 0;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 17px;
+    padding: 4px 10px 20px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    color: var(--text-dim); text-decoration: none; font-weight: 500;
+    transition: all .15s;
+  }
+  .nav-item:hover { background: var(--panel-2); color: var(--text); }
+  .nav-item.active { background: var(--accent-dim); color: #fff; }
+  .sidebar-footer { margin-top: auto; }
+  .logout-link { color: var(--red) !important; }
+
+  /* ---------- Main ---------- */
+  .main { flex: 1; padding: 24px 32px; max-width: 1400px; }
+  .topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; flex-wrap: wrap; gap: 12px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text); font-weight: 500; font-size: 13px;
+    cursor: pointer; text-decoration: none; transition: all .15s;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #7d99ff; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-danger:hover { border-color: var(--red); color: var(--red); }
+  .btn-warn:hover { border-color: var(--amber); color: var(--amber); }
+  .btn-ghost { background: transparent; border: none; color: var(--text-dim); }
+  .btn-ghost:hover { color: var(--text); }
+
+  /* ---------- Cards ---------- */
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .stat-label { color: var(--text-dim); font-size: 12px; margin-bottom: 6px; display:flex; align-items:center; gap:6px;}
+  .stat-value { font-size: 24px; font-weight: 700; }
+  .stat-bar { height: 5px; border-radius: 3px; background: var(--border); margin-top: 10px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .4s; }
+  .stat-bar-fill.warn { background: var(--amber); }
+  .stat-bar-fill.danger { background: var(--red); }
+
+  /* ---------- Badges ---------- */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
+  .badge-on { background: rgba(47,191,113,.15); color: var(--green); }
+  .badge-off { background: rgba(139,145,163,.15); color: var(--text-dim); }
+  .badge-vless { background: rgba(109,140,255,.15); color: var(--accent); }
+  .badge-vmess { background: rgba(168,117,224,.15); color: var(--purple); }
+  .badge-trojan { background: rgba(224,146,95,.15); color: var(--orange); }
+  .badge-ssh { background: rgba(79,195,224,.15); color: var(--cyan); }
+
+  /* ---------- Client cards ---------- */
+  .client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .client-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; transition: border-color .15s; }
+  .client-card:hover { border-color: #303650; }
+  .client-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .client-name { font-weight: 600; font-size: 15px; }
+  .client-meta { color: var(--text-faint); font-size: 11px; margin-top: 2px; }
+  .client-badges { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .link-box {
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px; word-break: break-all;
+    background: var(--bg); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+    color: var(--text-dim); position: relative; cursor: pointer; margin-bottom: 10px;
+  }
+  .link-box:hover { border-color: var(--accent); color: var(--text); }
+  .client-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .progress { background: var(--border); height: 5px; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; background: var(--cyan); }
+  .progress-fill.danger { background: var(--red); }
+
+  /* ---------- Filters ---------- */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+  .filter-bar input, .filter-bar select {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 12px; border-radius: 8px; font-size: 13px; font-family: inherit;
+  }
+  .filter-bar input { flex: 1; min-width: 180px; }
+
+  /* ---------- Forms ---------- */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
+  input, select { width: 100%; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 14px; font-family: inherit; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .helptext { font-size: 12px; color: var(--text-faint); margin-top: 5px; }
+
+  /* ---------- Toasts ---------- */
+  .toast-container { position: fixed; top: 18px; right: 18px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    padding: 12px 16px; border-radius: 8px; box-shadow: var(--shadow); font-size: 13px; min-width: 260px;
+    animation: slideIn .2s ease-out;
+  }
+  .toast.success { border-left-color: var(--green); }
+  .toast.error { border-left-color: var(--red); }
+  @keyframes slideIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; transform: translateX(30px); } }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-faint); }
+  .empty-state i { font-size: 32px; opacity: .4; margin-bottom: 10px; display: block; }
+
+  @media (max-width: 800px) {
+    body { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; overflow-x: auto; }
+    .sidebar-footer { margin-top: 0; }
+    .brand { padding: 4px 10px; }
+    .main { padding: 16px; }
+  }
+</style>
 </head>
 <body>
-<nav class="navbar navbar-expand navbar-dark mb-4">
-  <div class="container">
-    <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">PyXUI</a>
-    {% if session.get('logged_in') %}
-    <div class="d-flex">
-      <a class="btn btn-sm btn-outline-light me-2" href="{{ url_for('settings') }}">Settings</a>
-      <a class="btn btn-sm btn-outline-danger" href="{{ url_for('logout') }}">Logout</a>
-    </div>
-    {% endif %}
+
+{% if session.get('logged_in') %}
+<nav class="sidebar">
+  <a class="brand" href="{{ url_for('dashboard') }}"><span class="dot"></span> PyXUI</a>
+  <a class="nav-item {{ 'active' if request.endpoint == 'dashboard' }}" href="{{ url_for('dashboard') }}">
+    <i class="lucide-layout-dashboard"></i> Dashboard
+  </a>
+  <a class="nav-item {{ 'active' if request.endpoint == 'add_client' }}" href="{{ url_for('add_client') }}">
+    <i class="lucide-user-plus"></i> Add Client
+  </a>
+  <a class="nav-item {{ 'active' if request.endpoint == 'settings' }}" href="{{ url_for('settings') }}">
+    <i class="lucide-settings"></i> Settings
+  </a>
+  <div class="sidebar-footer">
+    <a class="nav-item logout-link" href="{{ url_for('logout') }}"><i class="lucide-log-out"></i> Logout</a>
   </div>
 </nav>
-<div class="container">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="alert {{ 'alert-success' if category == 'success' else 'alert-danger' }}">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
+{% endif %}
+
+<div class="main">
   {% block content %}{% endblock %}
 </div>
+
+<div class="toast-container" id="toasts">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="toast {{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<script>
+  // Auto-dismiss toasts
+  document.querySelectorAll('.toast').forEach(function(t, i) {
+    setTimeout(function() {
+      t.style.animation = 'fadeOut .3s forwards';
+      setTimeout(function(){ t.remove(); }, 300);
+    }, 4000 + i * 300);
+  });
+
+  function pushToast(msg, kind) {
+    var c = document.getElementById('toasts');
+    var el = document.createElement('div');
+    el.className = 'toast ' + (kind || 'success');
+    el.textContent = msg;
+    c.appendChild(el);
+    setTimeout(function(){ el.style.animation = 'fadeOut .3s forwards'; setTimeout(function(){el.remove();}, 300); }, 2500);
+  }
+
+  function copyText(text, label) {
+    navigator.clipboard.writeText(text).then(function() {
+      pushToast((label || 'Copied') + ' to clipboard', 'success');
+    }).catch(function() {
+      pushToast('Copy failed — select manually', 'error');
+    });
+  }
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

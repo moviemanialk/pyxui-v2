@@ -12,7 +12,10 @@ Day-to-day operation once the panel is installed and running.
    - **Protocol** — VLESS is the simplest and most widely supported;
      Trojan looks more like plain HTTPS traffic to network inspection;
      VMess is the older/more compatible option if a client app doesn't
-     support VLESS.
+     support VLESS; **OpenSSH** creates a real Linux tunnel account
+     instead of an Xray client — see [SSH.md](SSH.md) for how it differs
+     (no QR/subscription link, no traffic limit, password shown once on
+     the dashboard).
    - **Traffic limit** — `0` for unlimited, or a GB cap (e.g. `50`).
    - **Expiry date** — optional; leave blank for no expiry.
 3. Save. You're taken back to the dashboard where the new client's

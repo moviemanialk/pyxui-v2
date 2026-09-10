@@ -1,35 +1,64 @@
 {% extends "base.html" %}
 {% block title %}Add Client · PyXUI{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5">
-    <div class="card p-4">
-      <h5 class="mb-3">Add a new client</h5>
-      <form method="post">
-        <div class="mb-3">
-          <label class="form-label">Remark / label</label>
-          <input class="form-control" name="remark" placeholder="e.g. sithum-laptop" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Protocol</label>
-          <select class="form-select" name="protocol">
-            <option value="vless">VLESS</option>
-            <option value="vmess">VMess</option>
-            <option value="trojan">Trojan</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Traffic limit (GB, 0 = unlimited)</label>
-          <input class="form-control" type="number" step="0.1" min="0" name="traffic_limit_gb" value="0">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Expiry date (optional)</label>
-          <input class="form-control" type="date" name="expiry_date">
-        </div>
-        <button class="btn btn-primary w-100" type="submit">Create Client</button>
-        <a class="btn btn-outline-light w-100 mt-2" href="{{ url_for('dashboard') }}">Cancel</a>
-      </form>
-    </div>
+
+<div class="topbar">
+  <div>
+    <h1>Add Client</h1>
+    <div class="subtitle">Create a new tunnel account</div>
   </div>
 </div>
+
+<div class="card" style="max-width:480px;">
+  <form method="post">
+    <div class="form-group">
+      <label>Remark / label</label>
+      <input name="remark" placeholder="e.g. sithum-laptop" required>
+    </div>
+
+    <div class="form-group">
+      <label>Protocol</label>
+      <select name="protocol" id="protocol" onchange="onProtocolChange()">
+        <option value="vless">VLESS (WebSocket + TLS)</option>
+        <option value="vmess">VMess (WebSocket + TLS)</option>
+        <option value="trojan">Trojan (WebSocket + TLS)</option>
+        <option value="ssh">OpenSSH tunnel (native SSH account)</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="traffic-group">
+      <label>Traffic limit (GB, 0 = unlimited)</label>
+      <input type="number" step="0.1" min="0" name="traffic_limit_gb" value="0">
+      <div class="helptext" id="traffic-help">Tracked via Xray's stats API.</div>
+    </div>
+
+    <div class="form-group">
+      <label>Expiry date (optional)</label>
+      <input type="date" name="expiry_date">
+    </div>
+
+    <div class="helptext" id="ssh-note" style="display:none; margin-bottom:16px; padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border);">
+      <i class="lucide-info"></i> This creates a real, shell-restricted Linux account for
+      <code>ssh -D</code> / <code>-L</code> tunneling. The generated password is shown
+      <strong>once</strong> on the dashboard after creation — copy it then.
+    </div>
+
+    <button class="btn btn-primary" type="submit" style="width:100%; justify-content:center;">
+      <i class="lucide-plus"></i> Create Client
+    </button>
+    <a class="btn" href="{{ url_for('dashboard') }}" style="width:100%; justify-content:center; margin-top:8px;">Cancel</a>
+  </form>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+  function onProtocolChange() {
+    var proto = document.getElementById('protocol').value;
+    var isSsh = proto === 'ssh';
+    document.getElementById('traffic-group').style.display = isSsh ? 'none' : 'block';
+    document.getElementById('ssh-note').style.display = isSsh ? 'block' : 'none';
+  }
+  onProtocolChange();
+</script>
 {% endblock %}

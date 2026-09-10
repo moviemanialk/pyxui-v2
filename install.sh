@@ -5,7 +5,15 @@ set -e
 
 echo "==> Installing base packages"
 apt update
-apt install -y python3 python3-pip python3-venv nginx certbot curl unzip
+apt install -y python3 python3-pip python3-venv nginx certbot curl unzip openssh-server
+
+echo "==> Enabling TCP forwarding for OpenSSH tunnel accounts"
+# Required so panel-created SSH accounts (nologin shell) can still be used
+# for `ssh -D`/`-L` tunneling even though they can't get an interactive shell.
+if ! grep -q "^AllowTcpForwarding yes" /etc/ssh/sshd_config; then
+  echo "AllowTcpForwarding yes" >> /etc/ssh/sshd_config
+fi
+systemctl restart ssh 2>/dev/null || systemctl restart sshd
 
 echo "==> Installing Xray-core"
 bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)"
