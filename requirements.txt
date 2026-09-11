@@ -2,3 +2,4 @@ Flask>=3.0
 Werkzeug>=3.0
 qrcode[pil]>=7.4
 psutil>=5.9
+cryptography>=42.0

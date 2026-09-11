@@ -50,6 +50,22 @@ means:
   right Xray inbound; anything else returns a plain 404, so the domain
   looks like a dead/empty site to casual scanning.
 
+This applies to VLESS, VMess, and Trojan. **REALITY and Shadowsocks are
+different** — they listen directly on their own public ports, with no
+nginx in front at all:
+
+- **REALITY** does its own raw TLS handling because the whole mechanism
+  (relaying to a real site's handshake for non-clients) requires Xray
+  itself to own the TCP connection from the first byte — see
+  docs/REALITY.md.
+- **Shadowsocks** isn't an HTTP/WebSocket protocol, so there's nothing
+  for nginx to proxy — see docs/SHADOWSOCKS.md.
+
+**SSH and SSH-over-TLS are separate again** — they don't touch Xray at
+all. Plain SSH goes straight to sshd on port 22; SSH-over-TLS goes
+through stunnel (which owns its own port, using the same cert nginx
+uses) before reaching sshd — see docs/SSH.md.
+
 ## Why the panel and Xray are separate processes
 
 The Flask panel never proxies live VPN traffic — it only:

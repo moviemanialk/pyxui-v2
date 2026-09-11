@@ -87,12 +87,79 @@ caps on SSH accounts specifically, that would need to be enforced at the
 OS/network level (e.g. `tc` traffic shaping or per-user `iptables`
 counters) — outside what this panel manages.
 
-## Why not put SSH behind nginx/WebSocket like the others?
+## SSH-over-TLS ("sshtls") — the disguised version
 
-You could (this is what "SSH over TLS" via stunnel/Dropbear-on-443
-services do), but it adds real complexity for a use case that mostly
-doesn't need SNI-based disguising — SSH's own protocol already works
-fine on port 22 in most networks. If your use case specifically needs
-SSH disguised as HTTPS traffic on 443, that's a good next feature to
-add (stunnel wrapping port 22, fronted by nginx's `stream {}` module for
-SNI-based routing) — it's not built into this version.
+The plain `ssh` protocol above works fine on port 22 for most networks,
+but some clients specifically expect "SSL + SSH" — TLS-wrapped SSH on a
+port like 443/444, for networks that block or throttle raw SSH. The
+`sshtls` protocol type creates the exact same kind of Linux account as
+plain SSH, but the panel also configures **stunnel** to wrap it in TLS.
+
+### How it's wired
+
+```
+Client (HTTP Injector, etc.)
+   │  TLS handshake
+   ▼
+stunnel :444  (uses your existing Let's Encrypt cert)
+   │  plaintext SSH after TLS is stripped off
+   ▼
+sshd :22  (same restricted accounts as plain SSH)
+```
+
+The panel writes `/etc/stunnel/stunnel.conf` and restarts the
+`stunnel4` service automatically whenever you create an `sshtls`
+client, save Settings, or change the domain — using whatever
+certificate is currently at
+`/etc/letsencrypt/live/<domain>/`.
+
+### Requirements
+
+- `stunnel4` installed (`install.sh` does this)
+- A valid cert already issued for your domain (the same one used for
+  nginx) — if certbot hasn't run yet, `sshtls` client creation will
+  report a stunnel setup failure; get the cert first, then re-save
+  Settings to retry
+- The stunnel port (default `444`) open in your VPS firewall — this is
+  **separate** from port 443, since nginx already owns that; see
+  docs/INSTALL.md's firewall step for adding it
+
+### Certificate renewal
+
+Certbot renewing your main cert won't automatically update stunnel's
+copy of it. Add a renewal hook:
+```bash
+sudo nano /etc/letsencrypt/renewal-hooks/deploy/stunnel.sh
+```
+```bash
+#!/bin/bash
+DOMAIN="vpn.yourdomain.com"   # match your actual domain
+cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/letsencrypt/live/$DOMAIN/privkey.pem > /etc/stunnel/stunnel.pem
+chmod 600 /etc/stunnel/stunnel.pem
+systemctl restart stunnel4
+```
+```bash
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/stunnel.sh
+```
+(The panel itself also rewrites this file whenever you save Settings,
+so this hook is a safety net for automatic renewals specifically,
+which happen outside of any panel interaction.)
+
+### Connecting (HTTP Injector and similar apps)
+
+- **Tunnel type**: SSL + SSH (or "SSH over SSL/TLS")
+- **Server / SNI**: your domain
+- **Port**: whatever's set in Settings → SSH-over-TLS (default 444)
+- **Username / Password**: from the client card on the dashboard
+- The app's own "SNI hostname" field (some apps default this to
+  something unrelated, like `aka.ms`) doesn't need to match your
+  domain — stunnel doesn't inspect or route on SNI, it just presents
+  whichever certificate is configured. What has to match is the
+  **port** and the actual SSH credentials.
+
+## Why not put plain SSH behind nginx/WebSocket like the others?
+
+You could (this is exactly what the `sshtls` protocol above does, via
+stunnel), but plain SSH mostly doesn't need that added complexity —
+SSH's own protocol already works fine on port 22 in most networks. Use
+`sshtls` specifically when a client needs the disguised version.

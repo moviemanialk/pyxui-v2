@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Edit Client · PyXUI{% endblock %}
+{% block content %}
+
+<div class="topbar">
+  <div>
+    <h1>Edit {{ c.remark }}</h1>
+    <div class="subtitle">Protocol: <span class="badge badge-{{ c.protocol }}">{{ c.protocol }}</span> (fixed — delete and recreate to change protocol)</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:480px;">
+  <form method="post">
+    <div class="form-group">
+      <label>Remark / label</label>
+      <input name="remark" value="{{ c.remark }}" required>
+    </div>
+
+    {% if c.protocol not in ['ssh', 'sshtls'] %}
+    <div class="form-group">
+      <label>Traffic limit (GB, 0 = unlimited)</label>
+      <input type="number" step="0.1" min="0" name="traffic_limit_gb" value="{{ c.traffic_limit_gb }}">
+      <div class="helptext">Current usage: {{ '%.2f'|format(c.traffic_used_bytes / 1000000000) }} GB</div>
+    </div>
+    {% endif %}
+
+    <div class="form-group">
+      <label>Expiry date (optional)</label>
+      <input type="date" name="expiry_date" value="{{ c.expiry_date or '' }}">
+    </div>
+
+    <button class="btn btn-primary" type="submit" style="width:100%; justify-content:center;">
+      <i class="lucide-save"></i> Save changes
+    </button>
+    <a class="btn" href="{{ url_for('dashboard') }}" style="width:100%; justify-content:center; margin-top:8px;">Cancel</a>
+  </form>
+</div>
+
+{% endblock %}

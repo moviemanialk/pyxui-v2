@@ -9,6 +9,13 @@
   </div>
 </div>
 
+{% if not reality_ready %}
+<div class="card" style="max-width:480px; margin-bottom:16px; border-left:3px solid var(--amber);">
+  <i class="lucide-alert-triangle"></i> REALITY keys haven't been generated yet — this happens
+  automatically, but if the option below fails, check Settings.
+</div>
+{% endif %}
+
 <div class="card" style="max-width:480px;">
   <form method="post">
     <div class="form-group">
@@ -19,17 +26,26 @@
     <div class="form-group">
       <label>Protocol</label>
       <select name="protocol" id="protocol" onchange="onProtocolChange()">
-        <option value="vless">VLESS (WebSocket + TLS)</option>
-        <option value="vmess">VMess (WebSocket + TLS)</option>
-        <option value="trojan">Trojan (WebSocket + TLS)</option>
-        <option value="ssh">OpenSSH tunnel (native SSH account)</option>
+        <optgroup label="Xray — WebSocket + TLS (behind nginx)">
+          <option value="vless">VLESS</option>
+          <option value="vmess">VMess</option>
+          <option value="trojan">Trojan</option>
+        </optgroup>
+        <optgroup label="Xray — direct port, no nginx/cert needed">
+          <option value="reality">VLESS + REALITY (cloned TLS handshake)</option>
+          <option value="ss">Shadowsocks (2022, multi-user)</option>
+        </optgroup>
+        <optgroup label="Native OpenSSH">
+          <option value="ssh">Plain SSH tunnel</option>
+          <option value="sshtls">SSH-over-TLS ("SSL+SSH", HTTP Injector style)</option>
+        </optgroup>
       </select>
     </div>
 
     <div class="form-group" id="traffic-group">
       <label>Traffic limit (GB, 0 = unlimited)</label>
       <input type="number" step="0.1" min="0" name="traffic_limit_gb" value="0">
-      <div class="helptext" id="traffic-help">Tracked via Xray's stats API.</div>
+      <div class="helptext">Tracked via Xray's stats API. Not available for SSH protocols.</div>
     </div>
 
     <div class="form-group">
@@ -37,10 +53,24 @@
       <input type="date" name="expiry_date">
     </div>
 
-    <div class="helptext" id="ssh-note" style="display:none; margin-bottom:16px; padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border);">
-      <i class="lucide-info"></i> This creates a real, shell-restricted Linux account for
-      <code>ssh -D</code> / <code>-L</code> tunneling. The generated password is shown
-      <strong>once</strong> on the dashboard after creation — copy it then.
+    <div class="helptext proto-note" id="note-ssh" style="display:none; margin-bottom:16px; padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border);">
+      <i class="lucide-info"></i> Creates a real, shell-restricted Linux account for
+      <code>ssh -D</code> / <code>-L</code> tunneling on port 22. Password shown
+      <strong>once</strong> on the dashboard after creation.
+    </div>
+    <div class="helptext proto-note" id="note-sshtls" style="display:none; margin-bottom:16px; padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border);">
+      <i class="lucide-info"></i> Same as plain SSH, but wrapped in stunnel (TLS) — for clients
+      like HTTP Injector expecting "SSL + SSH". Requires stunnel to be installed and
+      configured (see docs/SSH.md).
+    </div>
+    <div class="helptext proto-note" id="note-reality" style="display:none; margin-bottom:16px; padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border);">
+      <i class="lucide-info"></i> Listens on its own dedicated port (not behind nginx) and
+      mimics the TLS handshake of the site configured in Settings → REALITY. No certificate
+      of your own needed for this one.
+    </div>
+    <div class="helptext proto-note" id="note-ss" style="display:none; margin-bottom:16px; padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border);">
+      <i class="lucide-info"></i> Also listens on its own dedicated port. Verify the generated
+      link format against your Xray version and client app — see docs/SHADOWSOCKS.md.
     </div>
 
     <button class="btn btn-primary" type="submit" style="width:100%; justify-content:center;">
@@ -55,9 +85,11 @@
 <script>
   function onProtocolChange() {
     var proto = document.getElementById('protocol').value;
-    var isSsh = proto === 'ssh';
+    var isSsh = proto === 'ssh' || proto === 'sshtls';
     document.getElementById('traffic-group').style.display = isSsh ? 'none' : 'block';
-    document.getElementById('ssh-note').style.display = isSsh ? 'block' : 'none';
+    document.querySelectorAll('.proto-note').forEach(function(el){ el.style.display = 'none'; });
+    var note = document.getElementById('note-' + proto);
+    if (note) note.style.display = 'block';
   }
   onProtocolChange();
 </script>

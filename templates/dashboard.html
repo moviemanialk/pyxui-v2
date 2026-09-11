@@ -23,11 +23,13 @@
   </div>
   <div class="stat-card">
     <div class="stat-label"><i class="lucide-network"></i> By protocol</div>
-    <div style="display:flex; gap:10px; margin-top:6px; font-size:12px;">
+    <div style="display:flex; gap:6px; margin-top:6px; font-size:11px; flex-wrap:wrap;">
       <span class="badge badge-vless">V {{ stats.by_protocol.vless }}</span>
       <span class="badge badge-vmess">M {{ stats.by_protocol.vmess }}</span>
       <span class="badge badge-trojan">T {{ stats.by_protocol.trojan }}</span>
-      <span class="badge badge-ssh">S {{ stats.by_protocol.ssh }}</span>
+      <span class="badge badge-reality">R {{ stats.by_protocol.reality }}</span>
+      <span class="badge badge-ss">SS {{ stats.by_protocol.ss }}</span>
+      <span class="badge badge-ssh">SSH {{ stats.by_protocol.ssh + stats.by_protocol.sshtls }}</span>
     </div>
   </div>
   {% if system %}
@@ -48,6 +50,13 @@
   {% endif %}
 </div>
 
+{% if traffic_chart['labels']|length > 1 %}
+<div class="card" style="margin-bottom:22px; padding:16px 18px;">
+  <div class="stat-label" style="margin-bottom:10px;"><i class="lucide-trending-up"></i> Total traffic over time (GB)</div>
+  <canvas id="trafficChart" height="70"></canvas>
+</div>
+{% endif %}
+
 <form class="filter-bar" method="get">
   <input type="text" name="q" placeholder="Search by remark..." value="{{ q }}">
   <select name="protocol" onchange="this.form.submit()">
@@ -55,7 +64,10 @@
     <option value="vless" {{ 'selected' if proto_filter == 'vless' }}>VLESS</option>
     <option value="vmess" {{ 'selected' if proto_filter == 'vmess' }}>VMess</option>
     <option value="trojan" {{ 'selected' if proto_filter == 'trojan' }}>Trojan</option>
+    <option value="reality" {{ 'selected' if proto_filter == 'reality' }}>REALITY</option>
+    <option value="ss" {{ 'selected' if proto_filter == 'ss' }}>Shadowsocks</option>
     <option value="ssh" {{ 'selected' if proto_filter == 'ssh' }}>SSH</option>
+    <option value="sshtls" {{ 'selected' if proto_filter == 'sshtls' }}>SSH-over-TLS</option>
   </select>
   <select name="status" onchange="this.form.submit()">
     <option value="">Any status</option>
@@ -75,30 +87,33 @@
     <div class="client-head">
       <div>
         <div class="client-name">{{ c.remark }}</div>
-        <div class="client-meta">created {{ c.created_at[:10] }}{% if c.expiry_date %} · expires {{ c.expiry_date }}{% endif %}</div>
+        <div class="client-meta">
+          created {{ c.created_at[:10] }}{% if c.expiry_date %} · expires {{ c.expiry_date }}{% endif %}
+          · <span class="badge {{ 'badge-online' if 'now' in c.activity or 'active' in c.activity else 'badge-offline' }}" style="padding:1px 7px;">{{ c.activity }}</span>
+        </div>
       </div>
       <span class="badge {{ 'badge-on' if c.enabled else 'badge-off' }}">{{ 'active' if c.enabled else 'off' }}</span>
     </div>
 
     <div class="client-badges">
       <span class="badge badge-{{ c.protocol }}">{{ c.protocol }}</span>
-      {% if c.protocol != 'ssh' %}
+      {% if c.protocol not in ['ssh', 'sshtls'] %}
         <span class="badge badge-off">{{ c.used_human }} / {{ c.limit_human }}</span>
       {% endif %}
     </div>
 
-    {% if c.traffic_limit_gb and c.protocol != 'ssh' %}
+    {% if c.traffic_limit_gb and c.protocol not in ['ssh', 'sshtls'] %}
     <div class="progress"><div class="progress-fill {{ 'danger' if c.pct_used >= 90 }}" style="width:{{ c.pct_used }}%"></div></div>
     {% endif %}
 
-    {% if c.protocol == 'ssh' %}
+    {% if c.protocol in ['ssh', 'sshtls'] %}
       <div class="link-box" onclick="copyText('{{ c.ssh_username }}', 'Username')">
         <i class="lucide-user"></i> {{ c.ssh_username }}
       </div>
       <div class="link-box" onclick="copyText('{{ c.ssh_password }}', 'Password')">
         <i class="lucide-key"></i> {{ c.ssh_password }}
       </div>
-      <div class="link-box" onclick="copyText('{{ c.link }}', 'SSH command')" style="margin-top:2px;">
+      <div class="link-box" onclick="copyText('{{ c.link }}', 'Connection info')" style="margin-top:2px;">
         {{ c.link }}
       </div>
     {% else %}
@@ -108,9 +123,10 @@
     {% endif %}
 
     <div class="client-actions">
-      {% if c.protocol != 'ssh' %}
-      <a class="btn btn-sm" href="{{ url_for('client_qr', client_id=c.id) }}"><i class="lucide-qr-code"></i> QR</a>
-      <a class="btn btn-sm" href="{{ url_for('subscription', sub_token=c.sub_token) }}" target="_blank"><i class="lucide-rss"></i> Sub</a>
+      <a class="btn btn-sm" href="{{ url_for('edit_client', client_id=c.id) }}"><i class="lucide-pencil"></i></a>
+      {% if c.protocol not in ['ssh', 'sshtls'] %}
+      <a class="btn btn-sm" href="{{ url_for('client_qr', client_id=c.id) }}"><i class="lucide-qr-code"></i></a>
+      <a class="btn btn-sm" href="{{ url_for('subscription', sub_token=c.sub_token) }}" target="_blank"><i class="lucide-rss"></i></a>
       {% endif %}
       <form method="post" action="{{ url_for('toggle_client', client_id=c.id) }}">
         <button class="btn btn-sm btn-warn">{{ 'Disable' if c.enabled else 'Enable' }}</button>
@@ -133,4 +149,34 @@
 </div>
 {% endif %}
 
+{% endblock %}
+{% block scripts %}
+{% if traffic_chart['labels']|length > 1 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  new Chart(document.getElementById('trafficChart'), {
+    type: 'line',
+    data: {
+      labels: {{ traffic_chart['labels'] | tojson }},
+      datasets: [{
+        label: 'Total GB',
+        data: {{ traffic_chart['values'] | tojson }},
+        borderColor: '#6d8cff',
+        backgroundColor: 'rgba(109,140,255,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#232838' }, ticks: { color: '#8b91a3' } },
+        y: { grid: { color: '#232838' }, ticks: { color: '#8b91a3' } }
+      }
+    }
+  });
+</script>
+{% endif %}
 {% endblock %}
